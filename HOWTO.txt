@@ -1,0 +1,65 @@
+Ghost Proxies HOWTO
+
+Short version, five steps.
+
+1. INSTALL RUST
+   Windows / Linux / macOS: https://rustup.rs  then reopen the terminal and check:
+       rustc --version
+
+2. WRITE THE ACCOUNTS
+   data.txt holds one row per line:
+       name@gmail.com|thepassword
+       other@gmail.com
+   A row without a password gets a random one on the first run, and the password is
+   written back into the same row so the next run reuses it. Only Gmail and Outlook
+   mailboxes are accepted by the site, and plus-addressing or extra dots are refused.
+
+3. BUILD
+       cargo build --release
+   or let the wrapper do it:
+       ./run.sh build
+
+4. LOOK BEFORE YOU CLAIM
+       ./run.sh probe
+   This asks the site whether the free trial is still open on the proxy line, and it
+   prints nothing about the proxy except the masked line. Nothing is written.
+
+5. RUN
+       ./run.sh run        foreground, one pass over data.txt
+       ./run.sh loop       foreground, repeats with sleep_seconds between passes
+       ./run.sh bg         background, log in ghostproxies-bot.log
+       ./run.sh screen     detached screen session
+       ./run.sh stop       stop the background run
+
+WHAT THE BOT DOES PER ROW
+   It signs in. If the account does not exist yet it asks the site whether the trial is
+   still available on the current egress, registers the account, then asks for a six
+   digit code. The code arrives in the mailbox, the bot prints
+
+       Verification code for na*****@gmail.com:
+
+   and waits. The digits are hidden as stars and the code is sent as soon as the
+   sixth digit is typed, so no enter is needed.
+
+       Control R    send a fresh code when the mail has not arrived
+       Control S    skip this account and move to the next row
+       Control C    stop the run
+
+   After that the bot verifies, opens the session,
+   reads the key the account already owns and appends it to apikey.txt, one key per line.
+   It never creates a new key.
+
+FILES
+   data.txt       gmail|password, one account per line
+   apikey.txt     the keys that were collected, one per line
+   proxy.txt      one proxy per line, empty means the box address
+   session.json   password, key, creation time and device of every account
+   config.json    sleep_seconds only
+
+NOTES
+   proxy.txt matters. The site hands the free trial once per device and network, so a
+   residential egress per account is what makes the rows go through. The country is
+   taken from the proxy line, and a line carrying __cr.<cc> gets that country swapped
+   for each account in turn.
+   Every account gets its own browser profile: user agent, client hints, screen, locale,
+   time zone and a 32 hex device fingerprint. Nothing is shared between rows.
