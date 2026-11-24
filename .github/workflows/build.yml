@@ -1,0 +1,66 @@
+name: Build Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ghostproxies-bot (${{ matrix.artifact }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: ghostproxies-bot-linux-x86_64
+            binary: target/release/ghostproxies-bot
+
+          - os: windows-latest
+            artifact: ghostproxies-bot-windows-x86_64
+            binary: target/release/ghostproxies-bot.exe
+
+          - os: macos-latest
+            artifact: ghostproxies-bot-macos-aarch64
+            binary: target/release/ghostproxies-bot
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Check formatting
+        if: runner.os == 'Linux'
+        run: cargo fmt --check
+
+      - name: Run the test suite
+        if: runner.os == 'Linux'
+        run: cargo test --release --locked
+
+      - name: Build the release binary
+        run: cargo build --release --locked
+
+      - name: Collect the binary
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp "${{ matrix.binary }}" "dist/${{ matrix.artifact }}"
+
+      - name: Upload the artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/${{ matrix.artifact }}
