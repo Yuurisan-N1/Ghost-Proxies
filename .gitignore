@@ -1,0 +1,16 @@
+/target
+**/*.rs.bk
+*.log
+.DS_Store
+dist
+.env
+.env.local
+*.env
+!.env.example
+tools/
+apikey.txt
+session.json
+src/support/consts/net.rs
+src/auth/create.rs
+src/job/store.rs
+src/net/egress.rs
